@@ -1,17 +1,18 @@
-## Overview
-A simplified clinic database to practice:
-- translating requirements into entities/relationships
-- applying primary keys, foreign keys, and constraints
-- writing sample SQL queries on a realistic schema
+## Simple Clinic System
 
-## Entities
-- **Persons**: shared personal information (name, DOB, gender, contact).
-- **Patients**: clinic patients (linked 1:1 to Persons).
-- **Doctors**: clinic doctors (linked 1:1 to Persons) + specialization.
-- **Appointments**: link patient ↔ doctor with date/time/status.
-- **MedicalRecords**: visit description, diagnosis, notes.
-- **Prescriptions**: medication details linked to a medical record.
-- **Payments**: payment details (per appointment in this version).
+This database represents a simple clinic used to practice
+relational database design and SQL.
 
-## Requirements Source
-The requirements and ERD were taken from the provided course material (Project 1: Simple Clinic). 
+The system is designed to manage:
+- Patients and doctors as different roles of the same `Persons` entity
+- Appointments between patients and doctors
+- Medical records created from appointments
+- Prescriptions linked to medical records
+- Payments linked to appointments
+
+The design uses:
+- 1:1 relationships between Persons ↔ Patients and Persons ↔ Doctors
+- 1:N relationships between Patients ↔ Appointments and Doctors ↔ Appointments
+- 1:N relationships between MedicalRecords ↔ Prescriptions
+
+This project is meant for learning and practice, not production use.
