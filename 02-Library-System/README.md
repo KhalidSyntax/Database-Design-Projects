@@ -1,35 +1,56 @@
-# 02 — Library Management System (Simple)
+
+# 02 — Library Management System
 
 This project is part of a personal learning repository for **relational database design**.
 
-It models a simple library with:
-- Books (with multiple authors)
-- Multiple copies per book + availability tracking
+It models a simple library system with:
 - Users with library card numbers
-- Borrowing/return records (loans)
-- Reservations (holds) with queue order
-- Fines with paid/unpaid status
+- Books and their physical copies
+- Borrowing and returning records
+- Reservations
+- Fines for late returns
+- System settings for borrow rules and fine calculation
 
-## Folder Structure
+---
+
+## 📁 Folder Structure
 - `ERD/` — the ERD image
 - `Database/`
   - `Create_Tables.sql` — schema (tables, keys, constraints)
-  - `Insert_Sample_Data.sql` — optional sample rows to test queries
-- `Description.md` — quick notes and assumptions
+  - `Insert_Sample_Data.sql` — sample data based on the actual dataset
+  - `Queries_Test.sql` — practice and verification queries
+  - `README.md` — how to run the database scripts
+- `Description.md` — design notes and assumptions
 
-## How to Run (SQL Server)
-1. (Optional) create a database:
+---
+
+## ▶ How to Run (SQL Server)
+
+1. **Create a database (optional)**
    ```sql
    CREATE DATABASE SimpleLibraryDB;
    GO
    USE SimpleLibraryDB;
    GO
-   ```
-2. Run:
-   - `Database/Create_Tables.sql`
-   - `Database/Insert_Sample_Data.sql` (optional)
+````
 
-## Notes / Assumptions (Simple Version)
-- Fines are modeled as **one fine per loan** (simple and easy for learning).
-- Reservations are tracked **per book** (not per copy) with `QueuePosition`.
-- Copy availability is stored in `BookCopies.IsAvailable` for quick checks.
+2. **Create tables**
+
+   * Run: `Database/Create_Tables.sql`
+
+3. **Insert sample data**
+
+   * Run: `Database/Insert_Sample_Data.sql`
+
+4. **Test and practice**
+
+   * Run: `Database/Queries_Test.sql`
+
+---
+
+## 🧠 Notes / Assumptions
+
+* Each book can have multiple copies.
+* Fines are stored per borrowing record.
+* System rules (borrow days and fine per day) are stored in the `Settings` table and used in queries for calculations.
+* This project is designed for learning and SQL practice.
