@@ -1,6 +1,6 @@
 /*
 01 - Simple Clinic System
-Queries_Test.sql
+Queries_Test.sql (Simple)
 Run AFTER:
 - Create_Tables.sql
 - Insert_Sample_Data.sql
@@ -9,147 +9,129 @@ Run AFTER:
 SET NOCOUNT ON;
 GO
 
-/* 1) Show all persons */
-SELECT *
-FROM dbo.Persons
-ORDER BY PersonID;
-GO
-
-/* 2) List patients with their personal info */
+/* 1) List patients with their personal info */
 SELECT
-    p.PatientID,
+    pa.PatientID,
     pe.PersonID,
     pe.[Name],
     pe.Gender,
-    pe.DateOfBirth,
     pe.PhoneNumber,
     pe.Email,
     pe.[Address]
-FROM dbo.Patients p
-JOIN dbo.Persons pe ON pe.PersonID = p.PersonID
-ORDER BY p.PatientID;
+FROM dbo.Patients pa
+JOIN dbo.Persons pe ON pe.PersonID = pa.PersonID
+ORDER BY pa.PatientID;
 GO
 
-/* 3) List doctors with their personal info */
+/* 2) List doctors with their personal info */
 SELECT
     d.DoctorID,
     pe.PersonID,
     pe.[Name] AS DoctorName,
     d.Specialization,
-    pe.PhoneNumber,
-    pe.Email
+    pe.PhoneNumber
 FROM dbo.Doctors d
 JOIN dbo.Persons pe ON pe.PersonID = d.PersonID
 ORDER BY d.DoctorID;
 GO
 
-/* 4) Appointments details (patient name + doctor name) */
+/* 3) Show appointments with patient + doctor names */
 SELECT
     a.AppointmentID,
     a.AppointmentDateTime,
     a.AppointmentStatus,
-    pat.PatientID,
-    patPe.[Name] AS PatientName,
-    doc.DoctorID,
-    docPe.[Name] AS DoctorName,
-    doc.Specialization,
-    a.MedicalRecordID,
-    a.PaymentID
+    pat.[Name] AS PatientName,
+    doc.[Name] AS DoctorName
 FROM dbo.Appointments a
-JOIN dbo.Patients pat ON pat.PatientID = a.PatientID
-JOIN dbo.Persons  patPe ON patPe.PersonID = pat.PersonID
-JOIN dbo.Doctors  doc ON doc.DoctorID = a.DoctorID
-JOIN dbo.Persons  docPe ON docPe.PersonID = doc.PersonID
+JOIN dbo.Patients p  ON p.PatientID = a.PatientID
+JOIN dbo.Persons pat ON pat.PersonID = p.PersonID
+JOIN dbo.Doctors d   ON d.DoctorID = a.DoctorID
+JOIN dbo.Persons doc ON doc.PersonID = d.PersonID
 ORDER BY a.AppointmentDateTime;
 GO
 
-/* 5) Appointments for a specific day (example: 2024-09-15) */
-DECLARE @Day DATE = '2024-09-15';
+/* 4) Appointments count per doctor */
+SELECT
+    doc.[Name] AS DoctorName,
+    COUNT(*) AS AppointmentsCount
+FROM dbo.Appointments a
+JOIN dbo.Doctors d   ON d.DoctorID = a.DoctorID
+JOIN dbo.Persons doc ON doc.PersonID = d.PersonID
+GROUP BY doc.[Name]
+ORDER BY AppointmentsCount DESC;
+GO
 
+/* 5) Show appointments that have no payment yet */
 SELECT
     a.AppointmentID,
     a.AppointmentDateTime,
-    a.AppointmentStatus,
-    patPe.[Name] AS PatientName,
-    docPe.[Name] AS DoctorName
+    pat.[Name] AS PatientName,
+    doc.[Name] AS DoctorName
 FROM dbo.Appointments a
-JOIN dbo.Patients pat ON pat.PatientID = a.PatientID
-JOIN dbo.Persons  patPe ON patPe.PersonID = pat.PersonID
-JOIN dbo.Doctors  doc ON doc.DoctorID = a.DoctorID
-JOIN dbo.Persons  docPe ON docPe.PersonID = doc.PersonID
-WHERE CAST(a.AppointmentDateTime AS DATE) = @Day
+JOIN dbo.Patients p  ON p.PatientID = a.PatientID
+JOIN dbo.Persons pat ON pat.PersonID = p.PersonID
+JOIN dbo.Doctors d   ON d.DoctorID = a.DoctorID
+JOIN dbo.Persons doc ON doc.PersonID = d.PersonID
+WHERE a.PaymentID IS NULL
 ORDER BY a.AppointmentDateTime;
 GO
 
-/* 6) Appointments without medical record (NULL MedicalRecordID) */
+/* 6) Show appointments that have no medical record yet */
 SELECT
     a.AppointmentID,
     a.AppointmentDateTime,
-    patPe.[Name] AS PatientName,
-    docPe.[Name] AS DoctorName
+    pat.[Name] AS PatientName,
+    doc.[Name] AS DoctorName
 FROM dbo.Appointments a
-JOIN dbo.Patients pat ON pat.PatientID = a.PatientID
-JOIN dbo.Persons  patPe ON patPe.PersonID = pat.PersonID
-JOIN dbo.Doctors  doc ON doc.DoctorID = a.DoctorID
-JOIN dbo.Persons  docPe ON docPe.PersonID = doc.PersonID
+JOIN dbo.Patients p  ON p.PatientID = a.PatientID
+JOIN dbo.Persons pat ON pat.PersonID = p.PersonID
+JOIN dbo.Doctors d   ON d.DoctorID = a.DoctorID
+JOIN dbo.Persons doc ON doc.PersonID = d.PersonID
 WHERE a.MedicalRecordID IS NULL
 ORDER BY a.AppointmentDateTime;
 GO
 
-/* 7) Appointments with payments (join Payments) */
+/* 7) Total paid amount per patient (based on payments linked to appointments) */
 SELECT
-    a.AppointmentID,
-    a.AppointmentDateTime,
-    patPe.[Name] AS PatientName,
-    pay.PaymentID,
-    pay.PaymentDate,
-    pay.PaymentMethod,
-    pay.AmountPaid
-FROM dbo.Appointments a
-JOIN dbo.Patients pat ON pat.PatientID = a.PatientID
-JOIN dbo.Persons  patPe ON patPe.PersonID = pat.PersonID
-JOIN dbo.Payments pay ON pay.PaymentID = a.PaymentID
-ORDER BY a.AppointmentDateTime;
-GO
-
-/* 8) Total paid amount per patient */
-SELECT
-    pat.PatientID,
-    patPe.[Name] AS PatientName,
+    pat.[Name] AS PatientName,
     SUM(pay.AmountPaid) AS TotalPaid
 FROM dbo.Appointments a
-JOIN dbo.Patients pat ON pat.PatientID = a.PatientID
-JOIN dbo.Persons patPe ON patPe.PersonID = pat.PersonID
+JOIN dbo.Patients p  ON p.PatientID = a.PatientID
+JOIN dbo.Persons pat ON pat.PersonID = p.PersonID
 JOIN dbo.Payments pay ON pay.PaymentID = a.PaymentID
-GROUP BY pat.PatientID, patPe.[Name]
+GROUP BY pat.[Name]
 ORDER BY TotalPaid DESC;
 GO
 
-/* 9) Medical records with their prescriptions */
+/* 8) Medical records with prescriptions count */
 SELECT
     mr.MedicalRecordID,
-    mr.VisitDescription,
     mr.Diagnosis,
+    COUNT(pr.PrescriptionID) AS PrescriptionsCount
+FROM dbo.MedicalRecords mr
+LEFT JOIN dbo.Prescriptions pr ON pr.MedicalRecordID = mr.MedicalRecordID
+GROUP BY mr.MedicalRecordID, mr.Diagnosis
+ORDER BY PrescriptionsCount DESC;
+GO
+
+/* 9) Show prescriptions (sample) */
+SELECT TOP (50)
     pr.PrescriptionID,
+    pr.MedicalRecordID,
     pr.MedicationName,
     pr.Dosage,
     pr.Frequency,
     pr.StartDate,
-    pr.EndDate,
-    pr.SpecialInstructions
-FROM dbo.MedicalRecords mr
-LEFT JOIN dbo.Prescriptions pr ON pr.MedicalRecordID = mr.MedicalRecordID
-ORDER BY mr.MedicalRecordID, pr.PrescriptionID;
+    pr.EndDate
+FROM dbo.Prescriptions pr
+ORDER BY pr.PrescriptionID;
 GO
 
-/* 10) Count appointments per doctor */
+/* 10) Count appointments by status */
 SELECT
-    d.DoctorID,
-    docPe.[Name] AS DoctorName,
-    COUNT(*) AS AppointmentsCount
+    a.AppointmentStatus,
+    COUNT(*) AS CountByStatus
 FROM dbo.Appointments a
-JOIN dbo.Doctors d ON d.DoctorID = a.DoctorID
-JOIN dbo.Persons docPe ON docPe.PersonID = d.PersonID
-GROUP BY d.DoctorID, docPe.[Name]
-ORDER BY AppointmentsCount DESC;
+GROUP BY a.AppointmentStatus
+ORDER BY a.AppointmentStatus;
 GO

@@ -15,7 +15,7 @@ It models a simple clinic with:
 - `ERD/` — the ERD image
 - `Database/`
   - `Create_Tables.sql` — schema (tables, keys, constraints)
-  - `Insert_Sample_Data.sql` — sample data based on a realistic dataset (English-only)
+  - `Insert_Sample_Data.sql` — sample data based on a realistic dataset
   - `Queries_Test.sql` — practice and verification queries
 - `README.md` — how to run the database scripts
 - `Description.md` — quick notes and assumptions
