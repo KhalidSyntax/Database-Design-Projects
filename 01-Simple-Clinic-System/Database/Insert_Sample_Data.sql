@@ -1,13 +1,16 @@
 /*
-01 - Simple Clinic System - Sample Data
-Inserts the same rows from your screenshots.
-Prescriptions.Frequency + SpecialInstructions are converted to English.
+01 - Simple Clinic System (SQL Server)
+Insert Sample Data (LARGE DATASET)
+
+Run AFTER: Create_Tables.sql
 */
 
 SET NOCOUNT ON;
 GO
 
--- Clean existing data (optional)
+/* =========================
+   Clean existing data
+   ========================= */
 DELETE FROM dbo.Prescriptions;
 DELETE FROM dbo.Appointments;
 DELETE FROM dbo.Payments;
@@ -17,109 +20,240 @@ DELETE FROM dbo.Patients;
 DELETE FROM dbo.Persons;
 GO
 
-/* ======================
-   Persons (IDs 1..4)
-   ====================== */
-SET IDENTITY_INSERT dbo.Persons ON;
-
-INSERT INTO dbo.Persons (PersonID, [Name], DateOfBirth, Gender, PhoneNumber, Email, [Address]) VALUES
-(1, N'Ali Ahmed',  '1990-03-15', N'M', N'0501112233', N'ali@example.com',  N'Jeddah'),
-(2, N'Sara Khaled','1985-07-10', N'F', N'0502223344', N'sara@example.com', N'Riyadh'),
-(3, N'Omar Nasser','1992-12-01', N'M', N'0503334455', N'omar@example.com', N'Dammam'),
-(4, N'Layla Saeed','1998-05-22', N'F', N'0504445566', N'layla@example.com',N'Jazan');
-
-SET IDENTITY_INSERT dbo.Persons OFF;
+/* Reseed identities (recommended) */
+DBCC CHECKIDENT ('dbo.Prescriptions', RESEED, 0);
+DBCC CHECKIDENT ('dbo.Appointments', RESEED, 0);
+DBCC CHECKIDENT ('dbo.Payments', RESEED, 0);
+DBCC CHECKIDENT ('dbo.MedicalRecords', RESEED, 0);
+DBCC CHECKIDENT ('dbo.Doctors', RESEED, 0);
+DBCC CHECKIDENT ('dbo.Patients', RESEED, 0);
+DBCC CHECKIDENT ('dbo.Persons', RESEED, 0);
 GO
 
-/* ======================
-   Patients (IDs 1..4)
-   ====================== */
-SET IDENTITY_INSERT dbo.Patients ON;
-
-INSERT INTO dbo.Patients (PatientID, PersonID) VALUES
-(1, 1),
-(2, 2),
-(3, 3),
-(4, 4);
-
-SET IDENTITY_INSERT dbo.Patients OFF;
+/* =========================
+   1) Persons (120)
+   - Persons 1..80 => Patients
+   - Persons 81..92 => Doctors (12)
+   - Remaining persons are unused (still realistic for future expansion)
+   ========================= */
+;WITH N AS
+(
+    SELECT TOP (120) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects
+)
+INSERT INTO dbo.Persons (Name, DateOfBirth, Gender, PhoneNumber, Email, Address)
+SELECT
+    CONCAT(
+        CASE WHEN n % 4 = 0 THEN 'Ali'
+             WHEN n % 4 = 1 THEN 'Sara'
+             WHEN n % 4 = 2 THEN 'Omar'
+             ELSE 'Maha' END,
+        ' ',
+        CASE WHEN n % 5 = 0 THEN 'Ahmed'
+             WHEN n % 5 = 1 THEN 'Khalid'
+             WHEN n % 5 = 2 THEN 'Saleh'
+             WHEN n % 5 = 3 THEN 'Nasser'
+             ELSE 'Hassan' END,
+        ' #', n
+    ) AS [Name],
+    DATEADD(DAY, -(6500 + n * 11), CAST('2025-01-01' AS DATE)) AS DateOfBirth,
+    CASE WHEN n % 2 = 0 THEN 'M' ELSE 'F' END AS Gender,
+    CONCAT('05', RIGHT(CONCAT('00000000', 10000000 + n), 8)) AS PhoneNumber,
+    CONCAT('person', n, '@example.com') AS Email,
+    CONCAT(
+        CASE (n % 7)
+            WHEN 0 THEN 'Riyadh'
+            WHEN 1 THEN 'Jeddah'
+            WHEN 2 THEN 'Dammam'
+            WHEN 3 THEN 'Madinah'
+            WHEN 4 THEN 'Mecca'
+            WHEN 5 THEN 'Taif'
+            ELSE 'Abha'
+        END,
+        ', Saudi Arabia'
+    ) AS [Address]
+FROM N;
 GO
 
-/* ======================
-   Doctors (IDs 1..2)
-   ====================== */
-SET IDENTITY_INSERT dbo.Doctors ON;
-
-INSERT INTO dbo.Doctors (DoctorID, PersonID, Specialization) VALUES
-(1, 2, N'Dermatologist'),
-(2, 3, N'Cardiologist');
-
-SET IDENTITY_INSERT dbo.Doctors OFF;
+/* =========================
+   2) Patients (80) => Persons 1..80
+   ========================= */
+;WITH N AS
+(
+    SELECT TOP (80) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects
+)
+INSERT INTO dbo.Patients (PersonID)
+SELECT n FROM N;
 GO
 
-/* ======================
-   MedicalRecords (IDs 1..4)
-   ====================== */
-SET IDENTITY_INSERT dbo.MedicalRecords ON;
-
-INSERT INTO dbo.MedicalRecords (MedicalRecordID, VisitDescription, Diagnosis, AdditionalNotes) VALUES
-(1, N'Routine check-up and blood test', N'Normal results', N'Follow-up in 6 months'),
-(2, N'Sore throat and mild fever',      N'Tonsillitis',    N'Antibiotics prescribed'),
-(3, N'Headache and dizziness',          N'Migraine',       N'Avoid stress and get proper sleep'),
-(4, N'Chest pain during exercise',      N'Angina',         N'Refer to cardiology for further tests');
-
-SET IDENTITY_INSERT dbo.MedicalRecords OFF;
+/* =========================
+   3) Doctors (12) => Persons 81..92
+   ========================= */
+;WITH N AS
+(
+    SELECT TOP (12) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects
+)
+INSERT INTO dbo.Doctors (PersonID, Specialization)
+SELECT
+    80 + n,
+    CASE (n % 6)
+        WHEN 0 THEN 'Dermatologist'
+        WHEN 1 THEN 'Cardiologist'
+        WHEN 2 THEN 'Pediatrician'
+        WHEN 3 THEN 'Orthopedic'
+        WHEN 4 THEN 'ENT'
+        ELSE 'General Physician'
+    END
+FROM N;
 GO
 
-/* ======================
-   Payments (IDs 1..4)
-   ====================== */
-SET IDENTITY_INSERT dbo.Payments ON;
-
-INSERT INTO dbo.Payments (PaymentID, PaymentDate, PaymentMethod, AmountPaid, AdditionalNotes) VALUES
-(1, '2025-11-06', N'Cash',     200, N'Paid in full'),
-(2, '2025-11-06', N'Card',     150, N'Partial payment'),
-(3, '2025-11-06', N'Transfer', 300, N'Online bank transfer'),
-(4, '2025-11-06', N'Cash',     250, N'Follow-up session payment');
-
-SET IDENTITY_INSERT dbo.Payments OFF;
+/* =========================
+   4) MedicalRecords (220)
+   ========================= */
+;WITH N AS
+(
+    SELECT TOP (220) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects
+)
+INSERT INTO dbo.MedicalRecords (VisitDescription, Diagnosis, AdditionalNotes)
+SELECT
+    CONCAT('Visit #', n, ' - consultation') AS VisitDescription,
+    CASE (n % 10)
+        WHEN 0 THEN 'Flu'
+        WHEN 1 THEN 'Migraine'
+        WHEN 2 THEN 'Allergy'
+        WHEN 3 THEN 'Hypertension'
+        WHEN 4 THEN 'Tonsillitis'
+        WHEN 5 THEN 'Back Pain'
+        WHEN 6 THEN 'Gastritis'
+        WHEN 7 THEN 'Diabetes Follow-up'
+        WHEN 8 THEN 'Skin Rash'
+        ELSE 'General Check'
+    END AS Diagnosis,
+    CASE (n % 5)
+        WHEN 0 THEN 'Follow-up in 2 weeks'
+        WHEN 1 THEN 'Lab tests requested'
+        WHEN 2 THEN 'Lifestyle advice provided'
+        WHEN 3 THEN 'Prescription provided'
+        ELSE 'Referred to specialist if needed'
+    END AS AdditionalNotes
+FROM N;
 GO
 
-/* ======================
-   Appointments (IDs 1..10)
-   ====================== */
-SET IDENTITY_INSERT dbo.Appointments ON;
+/* =========================
+   5) Payments (260)
+   ========================= */
+;WITH N AS
+(
+    SELECT TOP (260) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects
+)
+INSERT INTO dbo.Payments (PaymentDate, PaymentMethod, AmountPaid, AdditionalNotes)
+SELECT
+    DATEADD(DAY, n * 2, CAST('2024-01-01' AS DATE)) AS PaymentDate,
+    CASE (n % 3)
+        WHEN 0 THEN 'Cash'
+        WHEN 1 THEN 'Card'
+        ELSE 'Transfer'
+    END AS PaymentMethod,
+    CAST(100 + (n % 12) * 25 AS DECIMAL(18,0)) AS AmountPaid,
+    CASE WHEN n % 6 = 0 THEN 'Paid in full'
+         WHEN n % 6 = 1 THEN 'Partial payment'
+         ELSE NULL
+    END AS AdditionalNotes
+FROM N;
+GO
 
+/* =========================
+   6) Appointments (450)
+   - PatientID: 1..80
+   - DoctorID : 1..12
+   - Status: 0..3
+   - MedicalRecordID sometimes NULL
+   - PaymentID sometimes NULL
+   ========================= */
+;WITH N AS
+(
+    SELECT TOP (450) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects
+)
 INSERT INTO dbo.Appointments
-(AppointmentID, PatientID, DoctorID, AppointmentDateTime, AppointmentStatus, MedicalRecordID, PaymentID)
-VALUES
-(1,  1, 1, '2025-11-06T09:00:00', 0, NULL, NULL),
-(2,  2, 2, '2025-11-06T09:30:00', 1, 1,    1),
-(3,  3, 1, '2025-11-06T10:00:00', 0, NULL, NULL),
-(4,  4, 2, '2025-11-06T10:30:00', 2, NULL, NULL),
-(5,  1, 1, '2025-11-06T11:00:00', 3, NULL, NULL),
-(6,  2, 2, '2025-11-06T11:30:00', 1, 2,    2),
-(7,  3, 1, '2025-11-06T12:00:00', 0, NULL, NULL),
-(8,  4, 2, '2025-11-06T12:30:00', 1, 3,    3),
-(9,  1, 1, '2025-11-06T13:00:00', 2, NULL, NULL),
-(10, 2, 2, '2025-11-06T13:30:00', 0, 4,    4);
-
-SET IDENTITY_INSERT dbo.Appointments OFF;
+(
+    PatientID,
+    DoctorID,
+    AppointmentDateTime,
+    AppointmentStatus,
+    MedicalRecordID,
+    PaymentID
+)
+SELECT
+    ((n - 1) % 80) + 1 AS PatientID,
+    ((n - 1) % 12) + 1 AS DoctorID,
+    DATEADD(MINUTE, (n % 16) * 30,
+        DATEADD(DAY, n, CAST('2024-02-01' AS DATETIME))) AS AppointmentDateTime,
+    (n % 4) AS AppointmentStatus,
+    CASE WHEN n % 3 = 0 THEN NULL ELSE ((n - 1) % 220) + 1 END AS MedicalRecordID,
+    CASE WHEN n % 4 = 0 THEN NULL ELSE ((n - 1) % 260) + 1 END AS PaymentID
+FROM N;
 GO
 
-/* ======================
-   Prescriptions (IDs 1..5)  -- English only
-   ====================== */
-SET IDENTITY_INSERT dbo.Prescriptions ON;
-
+/* =========================
+   7) Prescriptions (350)
+   - Frequency + instructions in English
+   ========================= */
+;WITH N AS
+(
+    SELECT TOP (350) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects
+)
 INSERT INTO dbo.Prescriptions
-(PrescriptionID, MedicalRecordID, MedicationName, Dosage, Frequency, StartDate, EndDate, SpecialInstructions)
-VALUES
-(1, 1, N'Paracetamol',  N'500 mg',  N'Twice daily after meals',                 '2025-01-10', '2025-01-17', N'Do not exceed the prescribed dose'),
-(2, 2, N'Amoxicillin',  N'250 mg',  N'Three times daily',                       '2025-02-01', '2025-02-10', N'Shake well before use'),
-(3, 3, N'Ibuprofen',    N'400 mg',  N'As needed (maximum 3 times daily)',       '2025-03-05', '2025-03-12', N'Take after food only'),
-(4, 1, N'Vitamin D',    N'1000 IU', N'Once daily',                              '2025-01-15', '2025-02-15', N'Sun exposure is beneficial'),
-(5, 4, N'Metformin',    N'850 mg',  N'Twice daily',                             '2025-03-01', '2025-06-01', N'Drink plenty of water');
-
-SET IDENTITY_INSERT dbo.Prescriptions OFF;
+(
+    MedicalRecordID,
+    MedicationName,
+    Dosage,
+    Frequency,
+    StartDate,
+    EndDate,
+    SpecialInstructions
+)
+SELECT
+    ((n - 1) % 220) + 1 AS MedicalRecordID,
+    CASE (n % 10)
+        WHEN 0 THEN 'Paracetamol'
+        WHEN 1 THEN 'Amoxicillin'
+        WHEN 2 THEN 'Ibuprofen'
+        WHEN 3 THEN 'Vitamin D'
+        WHEN 4 THEN 'Metformin'
+        WHEN 5 THEN 'Cetirizine'
+        WHEN 6 THEN 'Omeprazole'
+        WHEN 7 THEN 'Azithromycin'
+        WHEN 8 THEN 'Salbutamol'
+        ELSE 'Loratadine'
+    END AS MedicationName,
+    CASE (n % 6)
+        WHEN 0 THEN '500 mg'
+        WHEN 1 THEN '250 mg'
+        WHEN 2 THEN '400 mg'
+        WHEN 3 THEN '1000 IU'
+        WHEN 4 THEN '850 mg'
+        ELSE '10 mg'
+    END AS Dosage,
+    CASE (n % 4)
+        WHEN 0 THEN 'Twice daily after meals'
+        WHEN 1 THEN 'Three times daily'
+        WHEN 2 THEN 'Once daily'
+        ELSE 'As needed (max 3/day)'
+    END AS Frequency,
+    DATEADD(DAY, n, CAST('2024-03-01' AS DATE)) AS StartDate,
+    DATEADD(DAY, n + (3 + (n % 12)), CAST('2024-03-01' AS DATE)) AS EndDate,
+    CASE (n % 5)
+        WHEN 0 THEN 'Do not exceed the prescribed dose'
+        WHEN 1 THEN 'Take with food'
+        WHEN 2 THEN 'Drink plenty of water'
+        WHEN 3 THEN 'Avoid driving if drowsy'
+        ELSE 'Shake well before use'
+    END AS SpecialInstructions
+FROM N;
 GO
