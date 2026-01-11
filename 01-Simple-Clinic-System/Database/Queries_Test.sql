@@ -63,8 +63,8 @@ JOIN dbo.Persons  docPe ON docPe.PersonID = doc.PersonID
 ORDER BY a.AppointmentDateTime;
 GO
 
-/* 5) Appointments for a specific day (example: 2025-11-06) */
-DECLARE @Day DATE = '2025-11-06';
+/* 5) Appointments for a specific day (example: 2024-09-15) */
+DECLARE @Day DATE = '2024-09-15';
 
 SELECT
     a.AppointmentID,
